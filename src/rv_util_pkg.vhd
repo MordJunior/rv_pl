@@ -15,6 +15,8 @@ package rv_util_pkg is
 	subtype byte_t is std_logic_vector (BYTE_WIDTH - 1 downto 0);
 	
 	constant RISCV_NOP : word_t := 32x"13";
+
+	function is_zero (data : std_logic_vector) return std_logic;
 	
 	function get_instr_format (instr : instr_t) return instr_format_t;
 	function get_immediate (instr : instr_t) return word_t;
@@ -27,6 +29,17 @@ package rv_util_pkg is
 end rv_util_pkg;
 
 package body rv_util_pkg is
+
+	function is_zero (
+		data : std_logic_vector
+	) return std_logic is
+	begin
+		if unsigned (data) = 0 then
+			return '1';
+		end if;
+
+		return '0';
+	end function is_zero;
 
 	function get_instr_format (instr : instr_t)
 	return instr_format_t is

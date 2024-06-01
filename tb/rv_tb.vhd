@@ -15,7 +15,7 @@ entity rv_tb is
 	generic (
 		-- ELF_FILE : string := "../../../lib/rv_sys/software/asm/send_uart/send_uart.elf";
 		ELF_FILE : string := "../../../lib/rv_sys/software/c/md5/md5.elf";
-		SIM_TIMEOUT : time := 5 ms
+		SIM_TIMEOUT : time := 2 ms
 	);
 end rv_tb;
 

@@ -34,7 +34,7 @@ architecture arch of rv_pl is
 
 	signal c2f, c2d, c2e, c2m, c2w : ctrl_t; -- control unit
 begin
-	ctrl_unit : entity work.rv_pl_ctrl (rtl)
+	ctrl_unit : entity work.rv_pl_ctrl (fwd)
 	port map (
 		clk, res_n,
 

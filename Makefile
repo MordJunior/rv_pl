@@ -50,20 +50,18 @@ gcc=$(pfx)-gcc
 obj=$(pfx)-objdump
 
 LOG_DIR=./logs
-LOG_FILE=$(LOG_DIR)/gsim.log
+LOG_FILE=gsim.log
 
 filter:
-	@rm -rf $(LOG_DIR) && mkdir $(LOG_DIR)
 	@echo "starting simulation"
-	@$(MAKE) gsim > $(LOG_FILE)
+	@$(MAKE) gsim > $(LOG_FILE) || echo "error while simulating"
 	@echo "finished simulation"
+	@rm -rf $(LOG_DIR) && mkdir $(LOG_DIR)
 	@echo -n "UART: "
-	@grep --text "UART" $(LOG_FILE) | sed -e 's/^.*UART: //' | tr -d '\n' | tee $(LOG_DIR)/uart.log; echo
 	@grep --text "GPIO" $(LOG_FILE) | sed -e 's/^.*GPIO//' > $(LOG_DIR)/gpio.log
 	@grep --text "IMEM" $(LOG_FILE) | sed -e 's/^.*IMEM //' > $(LOG_DIR)/imem.log
 	@grep --text "DMEM" $(LOG_FILE) | sed -e 's/^.*DMEM //' > $(LOG_DIR)/dmem.log
 	@grep --text "REG" $(LOG_FILE) | sed -e 's/^.*REG //' > $(LOG_DIR)/reg.log
-	@cat $(LOG_DIR)/imem.log | sed -e 's/^.*data=/.word /' > asm.S
-	@$(gcc) -c asm.S; $(obj) -D asm.o | sed -e 's/^\s*[0-9a-f]*:\s*[0-9a-f]*\s*//' > asm.S
+	@grep --text "UART" $(LOG_FILE) | sed -e 's/^.*UART: //' | tr -d '\n' | tee $(LOG_DIR)/uart.log; echo
 	@echo "finished filtering log"
 

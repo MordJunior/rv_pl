@@ -30,7 +30,7 @@ entity rv_pl_ctrl is
 end entity;
 
 architecture simple of rv_pl_ctrl is
-	signal state : std_logic_vector(4 downto 0);
+	signal state : std_logic_vector(3 downto 0);
 	signal stall : std_logic;
 begin
 	stall <= imem_busy or dmem_busy;
@@ -38,10 +38,10 @@ begin
 	sync : process(clk, res_n)
 	begin
 		if res_n = '0' then
-			state <= ('1', others => '0');
+			state <= (0 => '1', others => '0');
 		elsif rising_edge(clk) then
 			if stall = '0' then
-				state <= state(0) & state(4 downto 1);
+				state <= state(0) & state(3 downto 1);
 			end if;
 		end if;
 	end process;
@@ -59,7 +59,7 @@ begin
 
 			if m2f.branch = '1' then
 				fe.stall <= '0';
-			end if; -- */
+			end if;
 		end if;
 	end process;
 
@@ -74,59 +74,59 @@ begin
 	wb.flush   <= '0';
 end architecture;
 
-architecture rtl of rv_pl_ctrl is
-	signal state : std_logic_vector(4 downto 0);
+architecture fwd of rv_pl_ctrl is
 	signal stall : std_logic;
 
-	signal stall_mem, stall_mem_nxt, stall_mem_next : std_logic;
+	signal state, state_next : std_logic_vector (3 downto 0);
 begin
 	stall <= imem_busy or dmem_busy;
 
 	sync : process(clk, res_n)
 	begin
 		if res_n = '0' then
-			state <= ('1', others => '0');
-			stall_mem <= '0';
+			state <= (others => '0');
 		elsif rising_edge(clk) then
-			if stall = '0' then
-				state <= state(0) & state(4 downto 1);
-				stall_mem <= stall_mem_next;
+			if not stall then
+				state <= state_next;
 			end if;
 		end if;
 	end process;
 
-	process(all)
+	process (all)
 	begin
-		fe.flush <= '1';
 		fe.stall <= '1';
+		fe.flush <= '1';
 
-		stall_mem_next <= '0';
-
-		if stall = '0' then
-			if state(0) = '1' then
-				fe.stall <= '0'; 
+		if stall then
+			if is_zero (state_next) or state_next (state'high) then
 				fe.flush <= '0';
 			end if;
-
-			if m2f.branch = '1' then
+		else
+			if is_zero (state_next) or state_next (0) then
 				fe.stall <= '0';
-			end if; -- */
+				fe.flush <= '0';
+			end if;
 		end if;
+	end process;
 
-		if e2m.mem_op.memu_op.rd = '1' and -- not 
-			e2m.alu_result (word_t'high downto word_t'high - 1) = "00" -- */
-		then
-			stall_mem_next <= '1';
+	process (all)
+		variable opcode : opcode_t;
+	begin
+		state_next <= '0' & state(state'high downto 1);
+		opcode := get_opcode (f2d.instr);
+
+		if opcode = OPCODE_JAL or opcode = OPCODE_JALR or opcode = OPCODE_BRANCH then
+			state_next (state'high) <= '1';
 		end if;
 	end process;
 
 	dec.stall  <= stall;
 	exec.stall <= stall;
-	mem.stall  <= stall or stall_mem;
-	wb.stall   <= stall or stall_mem;
+	mem.stall  <= stall;
+	wb.stall   <= stall;
 
 	dec.flush  <= '0';
 	exec.flush <= '0';
 	mem.flush  <= '0';
 	wb.flush   <= '0';
-end rtl;
+end fwd;

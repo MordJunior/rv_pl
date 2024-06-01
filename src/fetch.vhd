@@ -25,20 +25,16 @@ entity rv_pl_fetch is
 end entity;
 
 architecture rtl of rv_pl_fetch is
-	function byte_to_word_addr (data : word_t) 
-	return mem_address_t is
-	begin
-		return data (RV_SYS_ADDR_WIDTH + 1 downto 2);
-	end function;
+	signal pc, pc_next, pc_calc : word_t := (others => '0');
 
-	--------------------------------------------------------------------------------
-
-	signal pc : word_t := (others => '0');
+	signal flush : std_logic;
 begin
+	pc_calc <= std_logic_vector (unsigned (pc) + 4);
+	pc_next <= m2f.branch_target when m2f.branch else pc_calc;
 
-	mem_out.rd <= res_n and not ctrl.flush;
+	mem_out.rd <= res_n and not ctrl.stall;
 	mem_out.byteena <= x"F";
-	mem_out.address <= to_word_address (pc) when not m2f.branch else to_word_address (m2f.branch_target);
+	mem_out.address <= to_word_address (pc_next) when not ctrl.stall else to_word_address (pc);
 
 	mem_out.wr <= '0';
 	mem_out.wrdata <= (others => '0');
@@ -46,19 +42,19 @@ begin
 	mem_busy <= mem_in.busy;
 
 	f2d.pc <= pc;
-	f2d.instr <= swap_endianness (mem_in.rddata) when not ctrl.flush else RISCV_NOP;
+	f2d.instr <= swap_endianness (mem_in.rddata) when not flush else RISCV_NOP;
 
 	process (clk, res_n)
 	begin
 		if not res_n then
-			pc <= (others => '0');
+			pc <= std_logic_vector (to_signed (-4, WORD_WIDTH)); -- -4 because we want to read from 0
 		elsif rising_edge (clk) then
+			flush <= ctrl.flush;
+
 			if ctrl.stall then
 				pc <= pc;
-			elsif m2f.branch then
-				pc <= m2f.branch_target;
-			elsif not ctrl.flush then
-				pc <= std_logic_vector (unsigned (pc) + 4);
+			else
+				pc <= pc_next;
 			end if;
 		end if;
 	end process;

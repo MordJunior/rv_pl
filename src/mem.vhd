@@ -34,12 +34,8 @@ architecture rtl of rv_pl_mem is
 	signal memu_rddata : word_t;
 
 	signal exec : e2m_t;
-	signal new_exec : std_logic;
 begin
-	mem_busy <= mem_in.busy;
-
 	-- memu_op <= MEMU_NOP when ctrl.stall else exec.mem_op.memu_op;
-	memu_op <= exec.mem_op.memu_op;
 
 	m2f.branch_target <= exec.branch_target;
 
@@ -65,12 +61,14 @@ begin
 		elsif rising_edge (clk) then
 			if ctrl.flush then
 				exec <= ((others => '0'), (others => '0'), (others => '0'), '0', (others => '0'), MEM_NOP, WB_NOP);
-			elsif not ctrl.stall then
-				exec <= e2m;
-				new_exec <= '1';
-			else
+				memu_op <= MEMU_NOP;
+			elsif ctrl.stall then
 				exec <= exec;
-				new_exec <= '0';
+				memu_op <= MEMU_NOP;
+				memu_op.access_type <= memu_op.access_type;
+			else
+				exec <= e2m;
+				memu_op <= e2m.mem_op.memu_op;
 			end if;
 		end if;
 	end process;
@@ -82,7 +80,7 @@ begin
 		exec.mem_data,
 		memu_rddata,
 
-		open,
+		mem_busy,
 		exc_load,
 		exc_store,
 

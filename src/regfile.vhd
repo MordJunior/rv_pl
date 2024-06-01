@@ -42,11 +42,11 @@ begin
 	process(rf, rd_addr1_reg, rd_addr2_reg, stall, wr, wr_addr, wr_data)
 	begin
 		rd_data1 <= rf(to_integer(unsigned(rd_addr1_reg)));
-		if rd_addr1_reg = wr_addr and wr = '1' and unsigned(wr_addr) /= 0 then
+		if stall = '0' and rd_addr1_reg = wr_addr and wr = '1' and unsigned(wr_addr) /= 0 then
 			rd_data1 <= wr_data;
 		end if;
 		rd_data2 <= rf(to_integer(unsigned(rd_addr2_reg)));
-		if rd_addr2_reg = wr_addr and wr = '1' and unsigned(wr_addr) /= 0 then
+		if stall = '0' and rd_addr2_reg = wr_addr and wr = '1' and unsigned(wr_addr) /= 0 then
 			rd_data2 <= wr_data;
 		end if;
 	end process;
@@ -55,7 +55,7 @@ begin
 	begin
 		if rising_edge(clk) then
 			if wr = '1' and unsigned(wr_addr) /= 0 then
-				-- report "REG [" & register_to_string (wr_addr) & "]: " & to_hstring (wr_data);
+				report "REG [" & register_to_string (wr_addr) & "]: " & to_hstring (wr_data);
 				rf(to_integer(unsigned(wr_addr))) <= wr_data;
 			end if;
 		end if;

@@ -25,7 +25,6 @@ end entity;
 
 architecture rtl of rv_pl_decode is
 	signal fetch : f2d_t := ((others => '0'), RISCV_NOP);
-	signal wrb : regwr_t := ('0', (others => '0'), (others => '0'));
 
 	signal exec : exec_op_t := EXEC_NOP;
 	signal mem : mem_op_t := MEM_NOP;
@@ -47,14 +46,13 @@ begin
 	begin
 		if not res_n then
 			fetch <= ((others => '0'), RISCV_NOP);
-			wrb <= ('0', (others => '0'), (others => '0'));
 		elsif rising_edge (clk) then
 			if ctrl.flush then
 				fetch <= (f2d.pc, RISCV_NOP);
-				wrb <= ('0', (others => '0'), (others => '0'));
-			elsif not ctrl.stall then
+			elsif ctrl.stall then
+				fetch <= fetch;
+			else
 				fetch <= f2d;
-				wrb <= w2d;
 			end if;
 		end if;
 	end process;
@@ -195,8 +193,8 @@ begin
 		get_rs2 (f2d.instr),
 		exec.rs2_data,
 
-		wrb.reg,
-		wrb.data,
-		wrb.write
+		w2d.reg,
+		w2d.data,
+		w2d.write
 	);
 end architecture;

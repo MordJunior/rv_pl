@@ -24,42 +24,66 @@ end entity;
 
 architecture rtl of rv_pl_exec is
 	signal dec : d2e_t;
-	signal mem, wrb : regwr_t;
 
 	signal alu_a, alu_b : word_t;
 begin
-
 	e2m.pc <= dec.pc;
 	e2m.mem_op <= dec.mem_op;
 	e2m.wb_op <= dec.wb_op;
-
-	e2m.mem_data <= dec.exec_op.rs2_data;
-
-	e2m.branch_target <= std_logic_vector (unsigned (dec.pc) + unsigned (dec.exec_op.imm)) when dec.exec_op.brt_src = SEL_PC_PLUS_IMM else
-		std_logic_vector (unsigned (dec.exec_op.rs1_data) + unsigned (dec.exec_op.imm));
 
 	process (clk, res_n)
 	begin
 		if not res_n then
 			dec <= ((others => '0'), EXEC_NOP, MEM_NOP, WB_NOP);
-			mem <= ('0', (others => '0'), (others => '0'));
-			wrb <= ('0', (others => '0'), (others => '0'));
 		elsif rising_edge (clk) then
 			if ctrl.flush then
 				dec <= ((others => '0'), EXEC_NOP, MEM_NOP, WB_NOP);
-				mem <= ('0', (others => '0'), (others => '0'));
-				wrb <= ('0', (others => '0'), (others => '0'));
-			elsif not ctrl.stall then
+			elsif ctrl.stall then
+				dec <= dec;
+			else
 				dec <= d2e;
-				mem <= m2e;
-				wrb <= w2e;
 			end if;
 		end if;
 	end process;
 
-	process (all)
-		constant zero : reg_address_t := (others => '0');
-		
+	process (all)		
+		variable rs1, rs2 : reg_address_t;
+	begin
+		rs1 := dec.exec_op.rs1;
+		rs2 := dec.exec_op.rs2;
+
+		case dec.exec_op.brt_src is
+			when SEL_PC_PLUS_IMM =>
+				e2m.branch_target <= std_logic_vector (unsigned (dec.pc) + unsigned (dec.exec_op.imm));
+
+			when others =>
+				e2m.branch_target <= std_logic_vector (unsigned (dec.exec_op.rs1_data) + unsigned (dec.exec_op.imm));
+
+				if not is_zero (rs1) then
+					if rs1 = w2e.reg and w2e.write = '1' then
+						e2m.branch_target <= std_logic_vector (unsigned (w2e.data) + unsigned (dec.exec_op.imm));
+					end if;
+
+					if rs1 = m2e.reg and m2e.write = '1' then
+						e2m.branch_target <= std_logic_vector (unsigned (m2e.data) + unsigned (dec.exec_op.imm));
+					end if;
+				end if;
+		end case;
+
+		e2m.mem_data <= dec.exec_op.rs2_data;
+
+		if not is_zero (rs2) then
+			if rs2 = w2e.reg and w2e.write = '1' then
+				e2m.mem_data <= w2e.data;
+			end if;
+
+			if rs2 = m2e.reg and m2e.write = '1' then
+				e2m.mem_data <= m2e.data;
+			end if;
+		end if;
+	end process;
+
+	process (all)		
 		variable rs1, rs2 : reg_address_t;
 	begin
 		rs1 := dec.exec_op.rs1;
@@ -70,14 +94,16 @@ begin
 				alu_a <= dec.pc;
 
 			when others =>
-				if rs1 = zero then
-					alu_a <= dec.exec_op.rs1_data;
-				elsif rs1 = mem.reg and mem.write = '1' then
-					alu_a <= mem.data;
-				elsif rs1 = wrb.reg and wrb.write = '1' then
-					alu_a <= wrb.data;
-				else
-					alu_a <= dec.exec_op.rs1_data;
+				alu_a <= dec.exec_op.rs1_data;
+
+				if not is_zero (rs1) then
+					if rs1 = w2e.reg and w2e.write = '1' then
+						alu_a <= w2e.data;
+					end if;
+
+					if rs1 = m2e.reg and m2e.write = '1' then
+						alu_a <= m2e.data;
+					end if;
 				end if;
 		end case;
 
@@ -89,14 +115,16 @@ begin
 				alu_b <= 32x"4";
 
 			when others =>
-				if rs2 = zero then
-					alu_b <= dec.exec_op.rs2_data;
-				elsif rs2 = mem.reg and mem.write = '1' then
-					alu_b <= mem.data;
-				elsif rs2 = wrb.reg and wrb.write = '1' then
-					alu_b <= wrb.data;
-				else
-					alu_b <= dec.exec_op.rs2_data;
+				alu_b <= dec.exec_op.rs2_data;
+
+				if not is_zero (rs2) then
+					if rs2 = w2e.reg and w2e.write = '1' then
+						alu_b <= w2e.data;
+					end if;
+					
+					if rs2 = m2e.reg and m2e.write = '1' then
+						alu_b <= m2e.data;
+					end if;
 				end if;
 		end case;
 	end process;

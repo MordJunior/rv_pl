@@ -31,7 +31,9 @@ begin
 		elsif rising_edge (clk) then
 			if ctrl.flush then
 				mem <= ((others => '0'), WB_NOP, (others => '0'), (others => '0'));
-			elsif not ctrl.stall then
+			elsif ctrl.stall then
+				mem <= mem;
+			else
 				mem <= m2w;
 			end if;
 		end if;

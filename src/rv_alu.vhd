@@ -17,7 +17,7 @@ end entity;
 
 architecture rtl of rv_alu is
 begin
-	Z <= R (0) when op = ALU_SLT or op = ALU_SLTU else
+	Z <= R(0) when op = ALU_SLT or op = ALU_SLTU else
 		 '1' when op = ALU_SUB and signed (A) = signed (B) else
 		 '0' when op = ALU_SUB else
 		 '0';
